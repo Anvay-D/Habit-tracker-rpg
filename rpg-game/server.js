@@ -55,7 +55,8 @@ app.get('/api/users/:userId/habits', (req, res) => {
 
 // Habit actions
 app.post('/api/habits/:habitId/complete', (req, res) => {
-  const result = gameService.completeHabit(req.params.habitId);
+  const { percentage } = req.body;
+  const result = gameService.completeHabit(req.params.habitId, percentage || 100);
   if (!result) {
     return res.status(404).json({ error: 'Habit not found' });
   }
@@ -68,6 +69,20 @@ app.post('/api/habits/:habitId/fail', (req, res) => {
     return res.status(404).json({ error: 'Habit not found' });
   }
   res.json(result);
+});
+
+// Nutrition tracking
+app.post('/api/users/:userId/nutrition', (req, res) => {
+  const result = gameService.logNutrition(req.params.userId, req.body);
+  if (!result) {
+    return res.status(404).json({ error: 'User not found' });
+  }
+  res.json(result);
+});
+
+app.get('/api/users/:userId/inventory', (req, res) => {
+  const inventory = gameService.inventory.get(req.params.userId) || [];
+  res.json(inventory);
 });
 
 const PORT = process.env.PORT || 3000;
