@@ -22,7 +22,12 @@ async function init() {
 
     // Create default user if none exists
     const userData = localStorage.getItem('userId');
-    if (!userData) {
+    // Validate that userId is a proper UUID, not "default" or invalid data
+    const isValidUserId = userData && userData !== '"default"' && userData.includes('-');
+
+    if (!isValidUserId) {
+        // Clear any invalid userId
+        localStorage.removeItem('userId');
         await createNewUser();
     } else {
         currentUserId = JSON.parse(userData);
@@ -132,7 +137,8 @@ async function loadUserData() {
     } catch (error) {
         console.error('Error loading user data:', error);
         localStorage.removeItem('userId');
-        location.reload();
+        // Don't reload to prevent infinite refresh loop
+        alert('Session expired. Please refresh the page manually.');
     }
 }
 
@@ -148,20 +154,27 @@ function renderHabits(habits) {
     habits.forEach(habit => {
         const card = document.createElement('div');
         card.className = 'habit-card';
+
+        // Calculate current progress from partial completions
+        const partialProgress = habit.stats.partialCompletions || 0;
+        const avgProgress = partialProgress > 0 ? Math.floor((habit.stats.xpEarned / (habit.xpReward * partialProgress)) * 100) : 0;
+
         card.innerHTML = `
             <div class="habit-info">
                 <h3>${habit.name}</h3>
                 <p>${habit.description}</p>
                 <div class="unlock-date">Quest Rate: ${habit.stats.completionRate}%</div>
+                ${partialProgress > 0 ? `<div class="progress-info">Progress: ${avgProgress}% (${partialProgress} sessions)</div>` : ''}
             </div>
             <div class="habit-stats">
                 <span class="xp-badge">+${habit.xpReward}XP / -${habit.xpPenalty}XP</span>
                 <span class="streak-badge">🔥 ${habit.stats.currentStreak} streak</span>
             </div>
             <div class="habit-actions">
-                <button class="btn-complete" onclick="completeHabit('${habit.id}')">COMPLETE</button>
+                <button class="btn-complete" onclick="PartialProgress.showProgressInput('${habit.id}', '${habit.name}', ${habit.xpReward})">RECORD PROGRESS</button>
                 <button class="btn-fail" onclick="failHabit('${habit.id}')">FAIL</button>
             </div>
+            ${habit.items && habit.items.length > 0 ? `<div class="items-earned">Items: ${habit.items.map(i => i.name).join(', ')}</div>` : ''}
         `;
         container.appendChild(card);
     });
@@ -169,19 +182,25 @@ function renderHabits(habits) {
 
 function renderAchievements(achievements) {
     const container = document.getElementById('achievements-list');
-    container.innerHTML = '';
 
-    // Show unlocked achievements first
-    achievements.unlocked.forEach(achievement => {
-        const card = createAchievementCard(achievement, true);
-        container.appendChild(card);
-    });
+    // Use Achievements module if available, otherwise fallback
+    if (window.Achievements && achievements) {
+        window.Achievements.renderAchievements(achievements, 'achievements-list');
+    } else {
+        container.innerHTML = '';
 
-    // Show locked achievements
-    achievements.locked.forEach(achievement => {
-        const card = createAchievementCard(achievement, false);
-        container.appendChild(card);
-    });
+        // Show unlocked achievements first
+        achievements.unlocked.forEach(achievement => {
+            const card = createAchievementCard(achievement, true);
+            container.appendChild(card);
+        });
+
+        // Show locked achievements
+        achievements.locked.forEach(achievement => {
+            const card = createAchievementCard(achievement, false);
+            container.appendChild(card);
+        });
+    }
 }
 
 function createAchievementCard(achievement, unlocked) {

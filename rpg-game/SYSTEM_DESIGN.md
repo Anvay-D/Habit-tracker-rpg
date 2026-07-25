@@ -187,6 +187,24 @@ Titles progress from E-Rank Hunter to King of the Dead based on total XP:
 - Achievements for hydration (3000ml) and nutrition (2000cal + 150g protein)
 - Food database integration via Open Food Facts API
 
+### 3.4 Partial Progress System
+- Habits support percentage-based completion (0-200%)
+- Partial completion grants proportional XP
+- Overachievement (>100%) awards bonus XP and RPG items
+- UI slider allows fine-grained progress tracking
+
+### 3.5 Achievement System
+- 12 default achievements covering milestones, streaks, and accomplishments
+- Progress tracking for locked achievements
+- Automatic unlocking on milestone completion
+- Visual progress bars for requirements
+
+### 3.6 Overachievement Rewards
+- Bonus XP multiplier (50%) for completion over 100%
+- Caps at 200% to prevent abuse
+- 3 completion limit per day per habit
+- Tiered item rewards based on overachievement level
+
 ### 11. Flow Trace Analysis
 
 #### Complete Request Chain
