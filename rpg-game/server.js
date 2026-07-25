@@ -3,12 +3,16 @@ import { GameService } from './src/services/GameService.js';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs';
+import cors from 'cors';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
-const gameService = new GameService();
+app.use(cors());
+
+const STORAGE_MODE = process.env.STORAGE_MODE || 'memory';
+const gameService = new GameService(STORAGE_MODE);
 
 // Create public directory if it doesn't exist
 const publicDir = path.join(__dirname, 'public');
@@ -27,14 +31,14 @@ app.get('/', (req, res) => {
 });
 
 // User routes
-app.post('/api/users', (req, res) => {
+app.post('/api/users', async (req, res) => {
   const { name } = req.body;
-  const user = gameService.createUser(name);
+  const user = await gameService.createUser(name);
   res.status(201).json({ userId: user.id, name: user.name });
 });
 
-app.get('/api/users/:userId', (req, res) => {
-  const stats = gameService.getUserStats(req.params.userId);
+app.get('/api/users/:userId', async (req, res) => {
+  const stats = await gameService.getUserStats(req.params.userId);
   if (!stats) {
     return res.status(404).json({ error: 'User not found' });
   }
@@ -42,9 +46,9 @@ app.get('/api/users/:userId', (req, res) => {
 });
 
 // Habit routes
-app.post('/api/users/:userId/habits', (req, res) => {
+app.post('/api/users/:userId/habits', async (req, res) => {
   const { name, description, xpReward, xpPenalty, frequency } = req.body;
-  const habit = gameService.createHabit(
+  const habit = await gameService.createHabit(
     req.params.userId,
     name,
     description,
@@ -55,23 +59,23 @@ app.post('/api/users/:userId/habits', (req, res) => {
   res.status(201).json(habit);
 });
 
-app.get('/api/users/:userId/habits', (req, res) => {
-  const habits = gameService.getUserHabits(req.params.userId);
+app.get('/api/users/:userId/habits', async (req, res) => {
+  const habits = await gameService.getUserHabits(req.params.userId);
   res.json(habits);
 });
 
 // Habit actions
-app.post('/api/habits/:habitId/complete', (req, res) => {
+app.post('/api/habits/:habitId/complete', async (req, res) => {
   const { percentage } = req.body;
-  const result = gameService.completeHabit(req.params.habitId, percentage || 100);
+  const result = await gameService.completeHabit(req.params.habitId, percentage || 100);
   if (!result) {
     return res.status(404).json({ error: 'Habit not found' });
   }
   res.json(result);
 });
 
-app.post('/api/habits/:habitId/fail', (req, res) => {
-  const result = gameService.failHabit(req.params.habitId);
+app.post('/api/habits/:habitId/fail', async (req, res) => {
+  const result = await gameService.failHabit(req.params.habitId);
   if (!result) {
     return res.status(404).json({ error: 'Habit not found' });
   }
@@ -79,8 +83,8 @@ app.post('/api/habits/:habitId/fail', (req, res) => {
 });
 
 // Nutrition tracking
-app.post('/api/users/:userId/nutrition', (req, res) => {
-  const result = gameService.logNutrition(req.params.userId, req.body);
+app.post('/api/users/:userId/nutrition', async (req, res) => {
+  const result = await gameService.logNutrition(req.params.userId, req.body);
   if (!result) {
     return res.status(404).json({ error: 'User not found' });
   }

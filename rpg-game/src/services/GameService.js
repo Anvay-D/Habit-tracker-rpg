@@ -3,14 +3,27 @@ import { Habit } from '../models/Habit.js';
 import { Achievement } from '../models/Achievement.js';
 import { TitleSystem } from '../models/Title.js';
 import { Item, ITEM_TEMPLATES } from '../models/Item.js';
+import { UserRepository } from '../repositories/UserRepository.js';
+import { HabitRepository } from '../repositories/HabitRepository.js';
+import { NutritionRepository } from '../repositories/NutritionRepository.js';
 
 export class GameService {
-  constructor() {
-    this.users = new Map();
-    this.habits = new Map();
+  constructor(storageMode = 'memory') {
+    this.storageMode = storageMode;
+    this.isDatabaseMode = storageMode === 'database';
+
+    if (this.isDatabaseMode) {
+      this.userRepo = new UserRepository();
+      this.habitRepo = new HabitRepository();
+      this.nutritionRepo = new NutritionRepository();
+    } else {
+      this.users = new Map();
+      this.habits = new Map();
+      this.inventory = new Map();
+      this.nutrition = new Map();
+    }
+
     this.achievements = this.initializeAchievements();
-    this.inventory = new Map(); // userId -> items[]
-    this.nutrition = new Map(); // userId -> {date: {water, calories, protein}}
   }
 
   initializeAchievements() {
@@ -27,27 +40,63 @@ export class GameService {
     ];
   }
 
-  createUser(name) {
-    const user = new User(name);
-    this.users.set(user.id, user);
-    return user;
+  // User methods
+  async createUser(name) {
+    if (this.isDatabaseMode) {
+      return await this.userRepo.create(name);
+    } else {
+      const user = new User(name);
+      this.users.set(user.id, user);
+      return user;
+    }
   }
 
-  getUser(userId) {
-    return this.users.get(userId);
+  async getUser(userId) {
+    if (this.isDatabaseMode) {
+      return await this.userRepo.findById(userId);
+    } else {
+      return this.users.get(userId);
+    }
   }
 
-  createHabit(userId, name, description, xpReward, xpPenalty, frequency, targetValue = 100) {
-    const habit = new Habit(userId, name, description, xpReward, xpPenalty, frequency, targetValue);
-    this.habits.set(habit.id, habit);
-    return habit;
+  // Habit methods
+  async createHabit(userId, name, description, xpReward, xpPenalty, frequency, targetValue = 100) {
+    if (this.isDatabaseMode) {
+      return await this.habitRepo.create(userId, name, description, xpReward, xpPenalty, frequency, targetValue);
+    } else {
+      const habit = new Habit(userId, name, description, xpReward, xpPenalty, frequency, targetValue);
+      this.habits.set(habit.id, habit);
+      return habit;
+    }
   }
 
-  getUserHabits(userId) {
-    return Array.from(this.habits.values()).filter(h => h.userId === userId && h.isActive);
+  async getUserHabits(userId) {
+    if (this.isDatabaseMode) {
+      return await this.habitRepo.findByUserId(userId);
+    } else {
+      return Array.from(this.habits.values()).filter(h => h.userId === userId && h.isActive);
+    }
   }
 
-  completeHabit(habitId, percentage = 100) {
+  // Action methods
+  async completeHabit(habitId, percentage = 100) {
+    if (this.isDatabaseMode) {
+      return await this.completeHabitDb(habitId, percentage);
+    } else {
+      return this.completeHabitMemory(habitId, percentage);
+    }
+  }
+
+  async failHabit(habitId) {
+    if (this.isDatabaseMode) {
+      return await this.failHabitDb(habitId);
+    } else {
+      return this.failHabitMemory(habitId);
+    }
+  }
+
+  // Memory mode implementations
+  completeHabitMemory(habitId, percentage = 100) {
     const habit = this.habits.get(habitId);
     if (!habit) return null;
 
@@ -57,7 +106,6 @@ export class GameService {
     let bonusXP = 0;
 
     if (user) {
-      // Handle item rewards for overachievement
       if (percentage > 100) {
         const overAmount = percentage - 100;
         const item = Item.generateForOverachievement(overAmount, habit.xpReward);
@@ -93,7 +141,7 @@ export class GameService {
     };
   }
 
-  failHabit(habitId) {
+  failHabitMemory(habitId) {
     const habit = this.habits.get(habitId);
     if (!habit) return null;
 
@@ -108,30 +156,69 @@ export class GameService {
     return { xpLost };
   }
 
-  checkAchievements(user, completedHabit = null) {
-    const unlockedAchievements = [];
-    const habitStats = {};
+  // Database mode implementations
+  async completeHabitDb(habitId, percentage = 100) {
+    const habit = await this.habitRepo.findById(habitId);
+    if (!habit) return null;
 
-    this.getUserHabits(user.id).forEach(h => {
-      habitStats[h.id] = h.getStats();
-    });
+    const xpGained = habit.complete(percentage);
+    const user = await this.userRepo.findById(habit.userId);
+    let itemsEarned = [];
+    let bonusXP = 0;
 
-    for (const achievement of this.achievements) {
-      const requirements = achievement.requirements;
-      if (requirements.habitId && requirements.habitId !== completedHabit?.id) {
-        continue;
+    if (user) {
+      if (percentage > 100) {
+        const overAmount = percentage - 100;
+        const item = Item.generateForOverachievement(overAmount, habit.xpReward);
+        if (item) {
+          itemsEarned.push(item);
+          bonusXP = Math.floor(item.xpRequired / 10);
+        }
       }
 
-      if (achievement.checkUnlock(user.id, user, habitStats)) {
-        user.addXP(achievement.xpReward);
-        unlockedAchievements.push(achievement);
-      }
+      user.addXP(xpGained + bonusXP);
+      user.updateStreak();
+      await this.userRepo.update(user);
+      await this.habitRepo.update(habit);
+      await this.habitRepo.recordCompletion(habitId, percentage, xpGained, new Date().toISOString().split('T')[0]);
     }
 
-    return unlockedAchievements;
+    return {
+      xpGained: xpGained + bonusXP,
+      leveledUp: user ? true : false,
+      newAchievements: [],
+      itemsEarned,
+      percentage: Math.max(100, percentage)
+    };
   }
 
-  getUserStats(userId) {
+  async failHabitDb(habitId) {
+    const habit = await this.habitRepo.findById(habitId);
+    if (!habit) return null;
+
+    const xpLost = habit.fail();
+    const user = await this.userRepo.findById(habit.userId);
+
+    if (user) {
+      user.subtractXP(xpLost);
+      await this.userRepo.update(user);
+      await this.habitRepo.update(habit);
+      await this.habitRepo.recordFailure(habitId, xpLost, new Date().toISOString().split('T')[0]);
+    }
+
+    return { xpLost };
+  }
+
+  // Stats method
+  async getUserStats(userId) {
+    if (this.isDatabaseMode) {
+      return await this.getUserStatsDb(userId);
+    } else {
+      return this.getUserStatsMemory(userId);
+    }
+  }
+
+  getUserStatsMemory(userId) {
     const user = this.users.get(userId);
     if (!user) return null;
 
@@ -144,14 +231,10 @@ export class GameService {
     const unlockedAchievements = this.achievements.filter(a => a.isUnlocked(userId));
     const lockedAchievements = this.achievements.filter(a => !a.isUnlocked(userId));
 
-    // Get title/rank info
     const titleInfo = TitleSystem.getTitle(user.totalXP);
     const titleProgress = TitleSystem.getProgressToNext(user.totalXP);
-
-    // Get inventory
     const userInventory = this.inventory.get(userId) || [];
 
-    // Get nutrition data for today
     const today = new Date().toDateString();
     const nutritionData = this.nutrition.get(userId) || {};
     const todayNutrition = nutritionData[today] || { water: 0, calories: 0, protein: 0 };
@@ -205,7 +288,63 @@ export class GameService {
     };
   }
 
+  async getUserStatsDb(userId) {
+    const stats = await this.userRepo.getStats(userId);
+    if (!stats) return null;
+
+    const user = stats.user;
+    const habits = await this.getUserHabits(userId);
+
+    const todayNutrition = await this.nutritionRepo.getTodayStats(userId);
+
+    return {
+      user: {
+        id: user.id,
+        name: user.name,
+        level: user.level,
+        xp: user.xp,
+        totalXP: user.totalXP,
+        xpToNextLevel: user.xpToNextLevel,
+        progress: user.getProgress(),
+        streak: user.streak,
+        title: stats.title,
+        rank: 1,
+        titleProgress: { percentage: 0, xpNeeded: 0 }
+      },
+      habits: habits.map(h => ({
+        id: h.id,
+        name: h.name,
+        description: h.description,
+        xpReward: h.xpReward,
+        xpPenalty: h.xpPenalty,
+        frequency: h.frequency,
+        targetValue: h.targetValue,
+        stats: h.getStats(),
+        items: []
+      })),
+      achievements: {
+        unlocked: [],
+        locked: this.achievements.map(a => ({
+          id: a.id,
+          name: a.name,
+          description: a.description,
+          xpReward: a.xpReward,
+          requirements: a.requirements
+        }))
+      },
+      inventory: [],
+      nutrition: {
+        today: todayNutrition,
+        stats: await this.nutritionRepo.getStats(userId)
+      }
+    };
+  }
+
   getNutritionStats(userId) {
+    if (this.isDatabaseMode) {
+      return this.nutritionRepo.getStats(userId);
+    }
+
     const nutritionData = this.nutrition.get(userId) || {};
     const entries = Object.values(nutritionData);
 
@@ -217,53 +356,37 @@ export class GameService {
     const avgCalories = Math.floor(entries.reduce((sum, e) => sum + e.calories, 0) / entries.length);
     const avgProtein = Math.floor(entries.reduce((sum, e) => sum + e.protein, 0) / entries.length);
 
-    // Calculate nutrition streak
-    let nutritionStreak = 0;
-    const sortedDates = Object.keys(nutritionData).sort().reverse();
-    const today = new Date();
-
-    for (let i = 0; i < sortedDates.length; i++) {
-      const entryDate = new Date(sortedDates[i]);
-      const daysDiff = Math.floor((today - entryDate) / (1000 * 60 * 60 * 24));
-
-      if (daysDiff === i && (nutritionData[sortedDates[i]].water >= 2000 || nutritionData[sortedDates[i]].calories >= 1500)) {
-        nutritionStreak++;
-      } else {
-        break;
-      }
-    }
-
-    return { avgWater, avgCalories, avgProtein, streak: nutritionStreak };
+    return { avgWater, avgCalories, avgProtein, streak: 0 };
   }
 
-  logNutrition(userId, { water = 0, calories = 0, protein = 0 }) {
-    const user = this.users.get(userId);
-    if (!user) return null;
+  async logNutrition(userId, data) {
+    if (this.isDatabaseMode) {
+      const entry = await this.nutritionRepo.logEntry(userId, data);
+      return { todayData: entry, achievements: [] };
+    } else {
+      const user = this.users.get(userId);
+      if (!user) return null;
 
-    const today = new Date().toDateString();
-    const nutritionData = this.nutrition.get(userId) || {};
+      const today = new Date().toDateString();
+      const nutritionData = this.nutrition.get(userId) || {};
 
-    if (!nutritionData[today]) {
-      nutritionData[today] = { water: 0, calories: 0, protein: 0 };
+      if (!nutritionData[today]) {
+        nutritionData[today] = { water: 0, calories: 0, protein: 0 };
+      }
+
+      nutritionData[today].water += data.water || 0;
+      nutritionData[today].calories += data.calories || 0;
+      nutritionData[today].protein += data.protein || 0;
+
+      this.nutrition.set(userId, nutritionData);
+
+      const todayData = nutritionData[today];
+      let achievements = [];
+
+      if (todayData.water >= 3000) achievements.push("Hydration Master");
+      if (todayData.calories >= 2000 && todayData.protein >= 150) achievements.push("Nutrition Adept");
+
+      return { todayData, achievements };
     }
-
-    nutritionData[today].water += water;
-    nutritionData[today].calories += calories;
-    nutritionData[today].protein += protein;
-
-    this.nutrition.set(userId, nutritionData);
-
-    // Check for nutrition achievements
-    const todayData = nutritionData[today];
-    let achievements = [];
-
-    if (todayData.water >= 3000) {
-      achievements.push("Hydration Master");
-    }
-    if (todayData.calories >= 2000 && todayData.protein >= 150) {
-      achievements.push("Nutrition Adept");
-    }
-
-    return { todayData, achievements };
   }
 }

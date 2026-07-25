@@ -35,15 +35,28 @@
 │  │  • XP Calculations    • Achievement Checks               │   │
 │  │  • Streak Tracking    • Stats Aggregation               │   │
 │  │  • Nutrition Logging  • Item Rewards                     │   │
+│  │  • Mode Switching     • Repository Abstraction           │   │
 │  └─────────────────────────────────────────────────────────┘   │
 │                              │                                  │
 │                              ▼                                  │
 │  ┌─────────────────────────────────────────────────────────┐   │
-│  │                    In-Memory Storage                     │   │
-│  │         Map<UserId, User>  Map<HabitId, Habit>          │   │
-│  │              Achievement[]                                │   │
-│  │              Map<UserId, Inventory> Map<UserId, NutritionData> │   │
+│  │                   GameService (Dual-Mode)                │   │
+│  │  ┌─────────────────────┐  ┌─────────────────────────┐   │   │
+│  │  │   Memory Mode       │  │    Database Mode        │   │   │
+│  │  │  (STORAGE_MODE=     │  │  (STORAGE_MODE=         │   │   │
+│  │  │     memory)         │  │     database)           │   │   │
+│  │  │ • Map<UserId,User>  │  │ • PostgreSQL via pg     │   │   │
+│  │  │ • Map<HabitId,Habit>│  │ • Repository Pattern    │   │   │
+│  │  │ • Map<Nutrition>    │  │ • Persistent Storage    │   │   │
+│  │  └─────────────────────┘  └─────────────────────────┘   │   │
 │  └─────────────────────────────────────────────────────────┘   │
+│                              │                                  │
+│               ┌──────────────┴──────────────┐                   │
+│               ▼                             ▼                   │
+│  ┌─────────────────────────┐  ┌─────────────────────────┐      │
+│  │   In-Memory Maps        │  │    PostgreSQL DB        │      │
+│  │  (data lost on restart) │  │  (persistent via Docker)│      │
+│  └─────────────────────────┘  └─────────────────────────┘      │
 └─────────────────────────────────────────────────────────────────┘
 ```
 

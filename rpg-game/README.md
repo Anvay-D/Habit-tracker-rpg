@@ -43,10 +43,32 @@ A habit tracking RPG system inspired by Solo Leveling with XP-based progression,
 
 ## Running
 
+### Memory Mode (Default - No Database Required)
 ```bash
 npm install
 npm start
 ```
+Runs with in-memory storage (data lost on restart).
+
+### Database Mode (PostgreSQL Required)
+```bash
+npm install
+STORAGE_MODE=database npm start
+```
+Requires PostgreSQL running locally with matching `.env` settings.
+
+### Docker (Recommended for Database)
+```bash
+docker compose up
+```
+Starts PostgreSQL database + application in one command. Data persists in Docker volume.
+
+### Environment Setup
+Copy `.env.example` to `.env` and configure:
+```bash
+cp .env.example .env
+```
+Edit `.env` with your database credentials if using database mode.
 
 ## Request Flow Verification
 
@@ -55,7 +77,7 @@ All requests follow this verified chain:
 2. Handlers access `currentUserId` state
 3. `fetch()` calls are made to backend endpoints
 4. Express routes delegate to `GameService`
-5. Business logic modifies in-memory Maps
+5. Business logic modifies storage (memory Maps or PostgreSQL based on STORAGE_MODE)
 
 To verify requests are sent, check browser Network tab or server console logs.
 
