@@ -38,15 +38,35 @@ async function init() {
 async function createNewUser() {
     // Check if we already have a valid user ID to prevent multiple prompts
     const existingUserId = localStorage.getItem('userId');
-    if (existingUserId) {
+    if (existingUserId && existingUserId !== '"default"') {
         currentUserId = JSON.parse(existingUserId);
-        return loadUserData();
+        const success = await loadUserData();
+        if (success) return;
     }
+
+    // Clear any invalid userId
+    localStorage.removeItem('userId');
+    currentUserId = null;
 
     const name = prompt('Enter your name:', 'Hunter');
     if (!name) {
-        // If no name provided, set a default to prevent infinite loop
-        localStorage.setItem('userId', JSON.stringify('default'));
+        // User cancelled - create a default user without prompting again
+        try {
+            const response = await fetch('/api/users', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name: 'Hunter' })
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                currentUserId = data.userId;
+                localStorage.setItem('userId', JSON.stringify(currentUserId));
+                await loadUserData();
+            }
+        } catch (error) {
+            console.error('Error creating default user:', error);
+        }
         return;
     }
 
@@ -67,8 +87,7 @@ async function createNewUser() {
         await loadUserData();
     } catch (error) {
         console.error('Error creating user:', error);
-        // Clear invalid userId to allow retry
-        localStorage.removeItem('userId');
+        alert('Failed to create user. Please refresh the page to try again.');
     }
 }
 
@@ -414,6 +433,39 @@ function addFoodToLog(calories, protein) {
 
     // Auto-log the nutrition
     logNutrition();
+}
+
+function quickAddWater(amount) {
+    const waterInput = document.getElementById('water-input');
+    waterInput.value = (parseInt(waterInput.value) || 0) + amount;
+}
+
+async function logWaterOnly() {
+    if (!currentUserId) return;
+
+    const water = parseInt(document.getElementById('water-input').value) || 0;
+
+    if (water === 0) {
+        alert('Please enter water amount');
+        return;
+    }
+
+    try {
+        const response = await fetch(`/api/users/${currentUserId}/nutrition`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ water, calories: 0, protein: 0 })
+        });
+
+        if (response.ok) {
+            const result = await response.json();
+            alert(`Water logged! ${result.achievements.length > 0 ? 'Achievements: ' + result.achievements.join(', ') : ''}`);
+            document.getElementById('water-input').value = '0';
+            await loadUserData();
+        }
+    } catch (error) {
+        console.error('Error logging water:', error);
+    }
 }
 
 async function logNutrition() {
