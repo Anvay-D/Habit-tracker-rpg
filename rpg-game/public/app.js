@@ -36,19 +36,40 @@ async function init() {
 }
 
 async function createNewUser() {
+    // Check if we already have a valid user ID to prevent multiple prompts
+    const existingUserId = localStorage.getItem('userId');
+    if (existingUserId) {
+        currentUserId = JSON.parse(existingUserId);
+        return loadUserData();
+    }
+
     const name = prompt('Enter your name:', 'Hunter');
-    if (!name) return;
+    if (!name) {
+        // If no name provided, set a default to prevent infinite loop
+        localStorage.setItem('userId', JSON.stringify('default'));
+        return;
+    }
 
-    const response = await fetch('/api/users', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name })
-    });
+    try {
+        const response = await fetch('/api/users', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name })
+        });
 
-    const data = await response.json();
-    currentUserId = data.userId;
-    localStorage.setItem('userId', JSON.stringify(currentUserId));
-    await loadUserData();
+        if (!response.ok) {
+            throw new Error('Failed to create user');
+        }
+
+        const data = await response.json();
+        currentUserId = data.userId;
+        localStorage.setItem('userId', JSON.stringify(currentUserId));
+        await loadUserData();
+    } catch (error) {
+        console.error('Error creating user:', error);
+        // Clear invalid userId to allow retry
+        localStorage.removeItem('userId');
+    }
 }
 
 async function loadUserData() {
@@ -62,6 +83,8 @@ async function loadUserData() {
         document.getElementById('player-name').textContent = data.user.name;
         document.getElementById('player-level').textContent = data.user.level;
         document.getElementById('player-streak').textContent = `${data.user.streak} days`;
+        document.getElementById('player-title').textContent = data.user.title;
+        document.getElementById('title').textContent = data.user.title;
 
         // Update XP bar
         const progress = data.user.progress;
@@ -83,6 +106,9 @@ async function loadUserData() {
 
         // Load achievements
         renderAchievements(data.achievements);
+
+        // Update nutrition display
+        updateNutritionDisplay(data.nutrition);
 
     } catch (error) {
         console.error('Error loading user data:', error);
@@ -332,6 +358,155 @@ window.loadUserData = async function() {
     // Render journal entries when data loads
     setTimeout(renderJournalEntries, 100);
 };
+
+// Nutrition functions
+async function searchFood() {
+    const query = document.getElementById('food-search').value.trim();
+    if (!query) return;
+
+    const resultsContainer = document.getElementById('food-results');
+    resultsContainer.innerHTML = '<div>Searching...</div>';
+
+    try {
+        const response = await fetch(`/api/food/search?query=${encodeURIComponent(query)}`);
+        if (!response.ok) throw new Error('Search failed');
+
+        const foods = await response.json();
+        resultsContainer.innerHTML = '';
+
+        if (foods.length === 0) {
+            resultsContainer.innerHTML = '<div>No results found</div>';
+            return;
+        }
+
+        foods.forEach(food => {
+            const foodEl = document.createElement('div');
+            foodEl.className = 'food-result';
+            foodEl.innerHTML = `
+                <div class="food-info">
+                    <strong>${food.name}</strong> ${food.brand ? `(${food.brand})` : ''}
+                    <span class="food-serving">${food.serving}</span>
+                </div>
+                <div class="food-nutrition">
+                    ${food.calories} cal, ${food.protein}g protein
+                </div>
+                <button onclick="addFoodToLog(${food.calories}, ${food.protein})">Add</button>
+            `;
+            resultsContainer.appendChild(foodEl);
+        });
+    } catch (error) {
+        console.error('Food search error:', error);
+        resultsContainer.innerHTML = '<div>Search failed. Please try again.</div>';
+    }
+}
+
+function addFoodToLog(calories, protein) {
+    // Add to existing nutrition inputs
+    const calInput = document.getElementById('calories-input');
+    const protInput = document.getElementById('protein-input');
+
+    calInput.value = (parseInt(calInput.value) || 0) + calories;
+    protInput.value = (parseInt(protInput.value) || 0) + protein;
+
+    // Clear search results
+    document.getElementById('food-results').innerHTML = '';
+    document.getElementById('food-search').value = '';
+
+    // Auto-log the nutrition
+    logNutrition();
+}
+
+async function logNutrition() {
+    if (!currentUserId) return;
+
+    const water = parseInt(document.getElementById('water-input').value) || 0;
+    const calories = parseInt(document.getElementById('calories-input').value) || 0;
+    const protein = parseInt(document.getElementById('protein-input').value) || 0;
+
+    if (water === 0 && calories === 0 && protein === 0) {
+        alert('Please enter at least one nutrition value');
+        return;
+    }
+
+    try {
+        const response = await fetch(`/api/users/${currentUserId}/nutrition`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ water, calories, protein })
+        });
+
+        if (response.ok) {
+            const result = await response.json();
+            alert(`Nutrition logged! ${result.achievements.length > 0 ? 'Achievements: ' + result.achievements.join(', ') : ''}`);
+
+            // Reset inputs
+            document.getElementById('water-input').value = '0';
+            document.getElementById('calories-input').value = '0';
+            document.getElementById('protein-input').value = '0';
+
+            await loadUserData();
+        }
+    } catch (error) {
+        console.error('Error logging nutrition:', error);
+    }
+}
+
+let nutritionChart = null;
+
+function updateNutritionDisplay(nutrition) {
+    if (!nutrition) return;
+
+    // Update stats
+    document.getElementById('today-water').textContent = `${nutrition.today.water}ml`;
+    document.getElementById('today-calories').textContent = nutrition.today.calories;
+    document.getElementById('today-protein').textContent = `${nutrition.today.protein}g`;
+    document.getElementById('nutrition-streak').textContent = `${nutrition.stats.streak} days`;
+
+    // Update chart
+    updateNutritionChart(nutrition);
+}
+
+function updateNutritionChart(nutrition) {
+    const canvas = document.getElementById('nutrition-chart');
+    if (!canvas) return;
+
+    const ctx = canvas.getContext('2d');
+
+    if (nutritionChart) {
+        nutritionChart.destroy();
+    }
+
+    // Sample data for the chart (last 7 days)
+    const labels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    const waterData = [2400, 2800, 2100, 3200, 2600, 3000, nutrition.today.water];
+    const caloriesData = [1800, 2100, 1500, 2000, 1900, 2200, nutrition.today.calories];
+
+    nutritionChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Water (ml)',
+                data: waterData,
+                borderColor: 'rgb(75, 192, 192)',
+                tension: 0.1
+            }, {
+                label: 'Calories',
+                data: caloriesData,
+                borderColor: 'rgb(255, 99, 132)',
+                tension: 0.1
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+}
 
 // Initialize on page load
 window.onload = init;
