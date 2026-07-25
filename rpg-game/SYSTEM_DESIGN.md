@@ -41,8 +41,8 @@
 │  ┌─────────────────────────────────────────────────────────┐   │
 │  │                    In-Memory Storage                     │   │
 │  │         Map<UserId, User>  Map<HabitId, Habit>          │   │
-│  │              Achievement[]  Journal[]                     │   │
-│  │              Map<UserId, Inventory> Map<Date, Nutrition> │   │
+│  │              Achievement[]                                │   │
+│  │              Map<UserId, Inventory> Map<UserId, NutritionData> │   │
 │  └─────────────────────────────────────────────────────────┘   │
 └─────────────────────────────────────────────────────────────────┘
 ```
@@ -97,6 +97,26 @@ Achievement
 │   └── habitId: UUID (optional, for habit-specific achievements)
 ├── unlockedBy: Set<UserId>
 └── unlockedAt: Map<UserId, Date>
+```
+
+#### Item Model
+```
+Item
+├── id: UUID
+├── name: String
+├── type: String (potion/weapon/armor/accessory)
+├── rarity: String (common/uncommon/rare/epic/legendary)
+├── xpRequired: Number (XP threshold for generation)
+├── obtainedAt: Date
+```
+
+#### Title/Rank Model
+```
+Title
+├── rank: String (E/D/C/B/A/S/Shadow Monarch/King of the Dead)
+├── title: String
+├── minXP: Number (minimum XP threshold)
+├── maxXP: Number (maximum XP threshold)
 ```
 
 ### 2. Core Algorithms
@@ -158,12 +178,13 @@ function checkUnlock(userId, userStats, habitStats):
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | POST | /api/users | Create new user |
-| GET | /api/users/:userId | Get complete user stats |
+| GET | /api/users/:userId | Get complete user stats including habits, achievements, inventory, nutrition |
 | POST | /api/users/:userId/habits | Create new habit/skill |
 | GET | /api/users/:userId/habits | List user's active habits |
 | POST | /api/habits/:habitId/complete | Complete habit (+XP, supports partial completion via percentage) |
 | POST | /api/habits/:habitId/fail | Fail habit (-XP) |
 | POST | /api/users/:userId/nutrition | Log nutrition data (water, calories, protein) |
+| GET | /api/users/:userId/inventory | Get user's inventory items |
 | GET | /api/food/search | Search food database using Open Food Facts API |
 
 ### 3.1 Dynamic Title System
@@ -204,28 +225,6 @@ Titles progress from E-Rank Hunter to King of the Dead based on total XP:
 - Caps at 200% to prevent abuse
 - 3 completion limit per day per habit
 - Tiered item rewards based on overachievement level
-
-### 11. Flow Trace Analysis
-
-#### Complete Request Chain
-```
-UI (HTML/JS) → Event Handler (onclick/JS)
-     → State Management (currentUserId, localStorage)
-     → HTTP Client (fetch)
-     → Backend (Express routes)
-     → GameService (business logic)
-     → In-Memory Storage (Maps)
-```
-
-#### Identified Issue
-- Click events in HTML (e.g., `onclick="createHabit()"`) were not properly connected to backend
-- Missing error handling in frontend after API calls
-- No request verification logging
-
-#### Fixed Implementation
-- Added public directory creation in server.js:server.js:14
-- Ensured all fetch calls in app.js properly await and handle responses
-- Verified all endpoints are correctly routed to GameService methods
 
 ### 4. Frontend Architecture
 
