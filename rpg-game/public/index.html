@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SOLO LEVELING - Status Window</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header>
+            <h1>SOLO LEVELING</h1>
+            <div class="player-info" id="player-info">
+                <span>TITLE: </span><span id="title">Shadow Monarch</span>
+            </div>
+        </header>
+
+        <!-- Navigation Bar -->
+        <nav class="nav-bar">
+            <button class="nav-btn active" data-tab="status">STATUS</button>
+            <button class="nav-btn" data-tab="tasks">TASKS</button>
+            <button class="nav-btn" data-tab="achievements">ACHIEVEMENTS</button>
+            <button class="nav-btn" data-tab="journal">JOURNAL</button>
+        </nav>
+
+        <!-- Status Tab -->
+        <div id="status-tab" class="tab-content active">
+            <div class="status-window">
+                <h2>STATUS WINDOW</h2>
+                <div class="status-content">
+                    <div class="player-stats">
+                        <div class="stat-row">
+                            <span class="stat-label">NAME</span>
+                            <span class="stat-value" id="player-name">-</span>
+                        </div>
+                        <div class="stat-row">
+                            <span class="stat-label">LEVEL</span>
+                            <span class="stat-value" id="player-level">-</span>
+                        </div>
+                        <div class="stat-row">
+                            <span class="stat-label">TITLE</span>
+                            <span class="stat-value" id="player-title">None</span>
+                        </div>
+                        <div class="stat-row">
+                            <span class="stat-label">HP</span>
+                            <span class="stat-value">100/100</span>
+                        </div>
+                        <div class="stat-row">
+                            <span class="stat-label">MP</span>
+                            <span class="stat-value">50/50</span>
+                        </div>
+                        <div class="stat-row">
+                            <span class="stat-label">FATIGUE</span>
+                            <span class="stat-value">0</span>
+                        </div>
+                        <div class="stat-row xp-row">
+                            <span class="stat-label">XP</span>
+                            <div class="xp-bar-container">
+                                <div class="xp-bar" id="xp-bar"></div>
+                                <span class="xp-text" id="xp-text">0/100</span>
+                            </div>
+                        </div>
+                        <div class="stat-row">
+                            <span class="stat-label">STREAK</span>
+                            <span class="stat-value" id="player-streak">0 days</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Stats Summary -->
+            <div class="section">
+                <h2>STATISTICS</h2>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <span class="stat-number" id="total-xp">0</span>
+                        <span class="stat-label">TOTAL XP</span>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-number" id="habits-count">0</span>
+                        <span class="stat-label">SKILLS</span>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-number" id="achievements-count">0</span>
+                        <span class="stat-label">ACHIEVEMENTS</span>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-number" id="completion-rate">0%</span>
+                        <span class="stat-label">SUCCESS RATE</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tasks Tab -->
+        <div id="tasks-tab" class="tab-content">
+            <div class="section">
+                <h2>SKILLS & QUESTS</h2>
+                <div class="add-habit">
+                    <input type="text" id="habit-name" placeholder="Skill name">
+                    <input type="text" id="habit-desc" placeholder="Description">
+                    <input type="number" id="habit-xp" placeholder="XP Reward" value="10">
+                    <input type="number" id="habit-penalty" placeholder="XP Penalty" value="5">
+                    <button onclick="createHabit()">ACQUIRE SKILL</button>
+                </div>
+
+                <div class="habits-list" id="habits-list">
+                    <!-- Habits will be populated here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Achievements Tab -->
+        <div id="achievements-tab" class="tab-content">
+            <div class="section">
+                <h2>ACHIEVEMENTS</h2>
+                <div class="achievements-list" id="achievements-list">
+                    <!-- Achievements will be populated here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Journal Tab -->
+        <div id="journal-tab" class="tab-content">
+            <div class="section">
+                <h2>JOURNAL</h2>
+                <div class="journal-entry-form">
+                    <input type="text" id="journal-title" placeholder="Entry title">
+                    <textarea id="journal-content" placeholder="Write about your progress..."></textarea>
+                    <button onclick="addJournalEntry()">LOG ENTRY</button>
+                </div>
+                <div class="journal-entries" id="journal-entries">
+                    <!-- Journal entries will be populated here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

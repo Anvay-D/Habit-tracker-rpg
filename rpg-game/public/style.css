@@ -1,0 +1,487 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Courier New', monospace;
+    background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 100%);
+    color: #fff;
+    min-height: 100vh;
+    padding: 20px;
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+header {
+    text-align: center;
+    margin-bottom: 30px;
+    padding: 20px;
+}
+
+h1 {
+    font-size: 3rem;
+    color: #ffd700;
+    text-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
+    letter-spacing: 5px;
+    margin-bottom: 10px;
+}
+
+.player-info {
+    color: #888;
+    font-size: 1.2rem;
+}
+
+#title {
+    color: #4a90e2;
+}
+
+/* Navigation Bar */
+.nav-bar {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 30px;
+    flex-wrap: wrap;
+}
+
+.nav-btn {
+    background: rgba(30, 30, 45, 0.8);
+    border: 1px solid #444;
+    color: #888;
+    padding: 12px 30px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-family: inherit;
+    font-weight: bold;
+    font-size: 1rem;
+    transition: all 0.3s;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+}
+
+.nav-btn:hover {
+    border-color: #666;
+    color: #fff;
+}
+
+.nav-btn.active {
+    background: #ffd700;
+    color: #000;
+    border-color: #ffd700;
+}
+
+/* Tab Content */
+.tab-content {
+    display: none;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+.status-window, .section {
+    background: rgba(20, 20, 30, 0.95);
+    border: 2px solid #333;
+    border-radius: 10px;
+    padding: 25px;
+    margin-bottom: 20px;
+    box-shadow: 0 0 30px rgba(0, 0, 0, 0.5);
+}
+
+.status-window {
+    border-color: #ffd700;
+    background: linear-gradient(180deg, rgba(30, 30, 45, 0.95) 0%, rgba(20, 20, 30, 0.95) 100%);
+}
+
+h2 {
+    color: #ffd700;
+    font-size: 1.5rem;
+    margin-bottom: 20px;
+    border-bottom: 1px solid #333;
+    padding-bottom: 10px;
+    letter-spacing: 2px;
+}
+
+.status-content {
+    padding: 10px 0;
+}
+
+.stat-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.stat-row:last-child {
+    border-bottom: none;
+}
+
+.stat-label {
+    color: #888;
+    font-weight: bold;
+}
+
+.stat-value {
+    color: #fff;
+    font-weight: bold;
+}
+
+.xp-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+}
+
+.xp-bar-container {
+    position: relative;
+    height: 25px;
+    background: #1a1a1a;
+    border: 1px solid #333;
+    border-radius: 5px;
+    overflow: hidden;
+}
+
+.xp-bar {
+    height: 100%;
+    background: linear-gradient(90deg, #4a90e2, #ffd700);
+    transition: width 0.3s ease;
+}
+
+.xp-text {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 0.9rem;
+    color: #fff;
+    text-shadow: 1px 1px 2px #000;
+    font-weight: bold;
+}
+
+/* Habits List */
+.add-habit {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+}
+
+.add-habit input {
+    background: #1a1a1a;
+    border: 1px solid #444;
+    color: #fff;
+    padding: 10px 15px;
+    border-radius: 5px;
+    font-family: inherit;
+    flex: 1;
+    min-width: 150px;
+}
+
+.add-habit input::placeholder {
+    color: #666;
+}
+
+.add-habit button {
+    background: #4a90e2;
+    color: #fff;
+    border: none;
+    padding: 10px 25px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-family: inherit;
+    font-weight: bold;
+    transition: all 0.3s;
+}
+
+.add-habit button:hover {
+    background: #ffd700;
+    color: #000;
+}
+
+.habits-list {
+    display: grid;
+    gap: 15px;
+}
+
+.habit-card {
+    background: rgba(30, 30, 45, 0.8);
+    border: 1px solid #444;
+    border-radius: 8px;
+    padding: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: all 0.3s;
+}
+
+.habit-card:hover {
+    border-color: #666;
+    transform: translateX(5px);
+}
+
+.habit-info h3 {
+    color: #4a90e2;
+    margin-bottom: 5px;
+}
+
+.habit-info p {
+    color: #888;
+    font-size: 0.9rem;
+}
+
+.habit-stats {
+    display: flex;
+    gap: 20px;
+    align-items: center;
+}
+
+.xp-badge {
+    background: rgba(74, 144, 226, 0.2);
+    color: #4a90e2;
+    padding: 5px 15px;
+    border-radius: 20px;
+    font-size: 0.9rem;
+    border: 1px solid #4a90e2;
+}
+
+.streak-badge {
+    background: rgba(255, 215, 0, 0.2);
+    color: #ffd700;
+    padding: 5px 15px;
+    border-radius: 20px;
+    font-size: 0.9rem;
+    border: 1px solid #ffd700;
+}
+
+.habit-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.btn-complete, .btn-fail {
+    padding: 8px 20px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-family: inherit;
+    font-weight: bold;
+    transition: all 0.3s;
+}
+
+.btn-complete {
+    background: #28a745;
+    color: #fff;
+}
+
+.btn-complete:hover {
+    background: #218838;
+}
+
+.btn-fail {
+    background: #dc3545;
+    color: #fff;
+}
+
+.btn-fail:hover {
+    background: #c82333;
+}
+
+/* Stats Grid */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+}
+
+.stat-card {
+    background: rgba(30, 30, 45, 0.8);
+    border: 1px solid #444;
+    border-radius: 8px;
+    padding: 20px;
+    text-align: center;
+}
+
+.stat-card .stat-number {
+    display: block;
+    font-size: 2rem;
+    color: #ffd700;
+    margin-bottom: 5px;
+}
+
+.stat-card .stat-label {
+    color: #888;
+    font-size: 0.9rem;
+}
+
+/* Achievements */
+.achievements-list {
+    display: grid;
+    gap: 15px;
+}
+
+.achievement-card {
+    background: rgba(30, 30, 45, 0.8);
+    border: 1px solid #444;
+    border-radius: 8px;
+    padding: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.achievement-card.unlocked {
+    border-color: #ffd700;
+    background: rgba(255, 215, 0, 0.1);
+}
+
+.achievement-info h3 {
+    color: #ffd700;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.achievement-info p {
+    color: #888;
+    margin-top: 5px;
+    font-size: 0.9rem;
+}
+
+.achievement-xp {
+    color: #ffd700;
+    font-weight: bold;
+}
+
+.unlock-date {
+    color: #666;
+    font-size: 0.8rem;
+    margin-top: 10px;
+}
+
+/* Journal Styles */
+.journal-entry-form {
+    margin-bottom: 20px;
+}
+
+.journal-entry-form input,
+.journal-entry-form textarea {
+    width: 100%;
+    background: #1a1a1a;
+    border: 1px solid #444;
+    color: #fff;
+    padding: 12px;
+    border-radius: 5px;
+    font-family: inherit;
+    margin-bottom: 10px;
+}
+
+.journal-entry-form textarea {
+    height: 100px;
+    resize: vertical;
+}
+
+.journal-entry-form button {
+    background: #4a90e2;
+    color: #fff;
+    border: none;
+    padding: 10px 25px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-family: inherit;
+    font-weight: bold;
+    transition: all 0.3s;
+}
+
+.journal-entry-form button:hover {
+    background: #ffd700;
+    color: #000;
+}
+
+.journal-entry {
+    background: rgba(30, 30, 45, 0.8);
+    border: 1px solid #444;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 15px;
+}
+
+.journal-entry h3 {
+    color: #4a90e2;
+    margin-bottom: 10px;
+}
+
+.journal-entry p {
+    color: #ccc;
+    line-height: 1.6;
+}
+
+.journal-entry .entry-date {
+    color: #666;
+    font-size: 0.85rem;
+    margin-top: 10px;
+}
+
+/* Level up animation */
+.level-up {
+    animation: levelUpAnim 1s ease;
+}
+
+@keyframes levelUpAnim {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.2); }
+}
+
+/* Achievement unlock animation */
+.achievement-unlock {
+    animation: achievementUnlock 0.5s ease;
+}
+
+@keyframes achievementUnlock {
+    0% { transform: scale(0.8) rotate(-10deg); opacity: 0; }
+    50% { transform: scale(1.1) rotate(5deg); }
+    100% { transform: scale(1) rotate(0deg); opacity: 1; }
+}
+
+/* Notifications */
+.notification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    padding: 15px 25px;
+    background: rgba(0, 0, 0, 0.9);
+    border: 1px solid #ffd700;
+    border-radius: 5px;
+    color: #fff;
+    animation: slideIn 0.3s ease;
+    z-index: 1000;
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@media (max-width: 768px) {
+    .habit-card {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 15px;
+    }
+
+    .add-habit {
+        flex-direction: column;
+    }
+}
