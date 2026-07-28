@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SOLO LEVELING - Status Window</title>
     <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="css/nutrition.css">
 </head>
 <body>
     <div class="container">
@@ -12,7 +13,7 @@
         <header>
             <h1>SOLO LEVELING</h1>
             <div class="player-info" id="player-info">
-                <span>TITLE: </span><span id="title">Shadow Monarch</span>
+                <span>TITLE: </span><span id="title">E-Rank Hunter</span>
             </div>
         </header>
 
@@ -90,6 +91,56 @@
                         <span class="stat-label">SUCCESS RATE</span>
                     </div>
                 </div>
+            </div>
+
+            <!-- Nutrition Section -->
+            <div class="section">
+                <h2>NUTRITION TRACKER</h2>
+                <div class="nutrition-search">
+                    <input type="text" id="food-search" placeholder="Search for food (e.g., apple, banana)">
+                    <button onclick="searchFood()">Search</button>
+                </div>
+                <div id="food-results" class="food-results"></div>
+                <div class="nutrition-inputs">
+                    <div class="nutrition-input">
+                        <label>Water (ml)</label>
+                        <input type="number" id="water-input" value="0" min="0" step="100">
+                        <div class="water-buttons">
+                            <button onclick="quickAddWater(250)">+250ml</button>
+                            <button onclick="quickAddWater(500)">+500ml</button>
+                            <button onclick="quickAddWater(1000)">+1L</button>
+                            <button onclick="logWaterOnly()">Log Water</button>
+                        </div>
+                    </div>
+                    <div class="nutrition-input">
+                        <label>Calories</label>
+                        <input type="number" id="calories-input" value="0" min="0" step="10">
+                    </div>
+                    <div class="nutrition-input">
+                        <label>Protein (g)</label>
+                        <input type="number" id="protein-input" value="0" min="0" step="1">
+                    </div>
+                    <button onclick="logNutrition()">Log All Nutrition</button>
+                </div>
+                <div class="nutrition-stats">
+                    <div class="nutrition-stat">
+                        <span class="stat-label">Today's Water</span>
+                        <span class="stat-value" id="today-water">0ml</span>
+                    </div>
+                    <div class="nutrition-stat">
+                        <span class="stat-label">Today's Calories</span>
+                        <span class="stat-value" id="today-calories">0</span>
+                    </div>
+                    <div class="nutrition-stat">
+                        <span class="stat-label">Today's Protein</span>
+                        <span class="stat-value" id="today-protein">0g</span>
+                    </div>
+                    <div class="nutrition-stat">
+                        <span class="stat-label">Nutrition Streak</span>
+                        <span class="stat-value" id="nutrition-streak">0 days</span>
+                    </div>
+                </div>
+                <canvas id="nutrition-chart" width="400" height="200"></canvas>
             </div>
         </div>
 

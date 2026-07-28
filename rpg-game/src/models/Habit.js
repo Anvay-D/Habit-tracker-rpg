@@ -1,7 +1,7 @@
 import { v4 as uuidv4 } from 'uuid';
 
 export class Habit {
-  constructor(userId, name, description, xpReward, xpPenalty, frequency = 'daily') {
+  constructor(userId, name, description, xpReward, xpPenalty, frequency = 'daily', targetValue = 100) {
     this.id = uuidv4();
     this.userId = userId;
     this.name = name;
@@ -9,29 +9,54 @@ export class Habit {
     this.xpReward = xpReward;
     this.xpPenalty = xpPenalty;
     this.frequency = frequency; // daily, weekly, custom
+    this.targetValue = targetValue; // Target value for partial completion (e.g., 100%)
     this.isActive = true;
     this.completions = [];
     this.failures = [];
     this.currentStreak = 0;
     this.bestStreak = 0;
     this.totalCompletions = 0;
+    this.partialCompletions = []; // Track partial progress {date, percentage, xpEarned}
+    this.items = []; // Rewards earned
     this.createdAt = new Date();
     this.lastCompletedDate = null;
   }
 
-  complete(date = new Date()) {
+  complete(percentage = 100, date = new Date()) {
     const completionDate = new Date(date);
-    this.completions.push(completionDate);
-    this.totalCompletions += 1;
-    this.lastCompletedDate = completionDate;
-    this.updateStreak(completionDate);
-    return this.xpReward;
+    const actualPercentage = Math.max(0, Math.min(100, percentage));
+
+    if (actualPercentage === 100) {
+      this.completions.push(completionDate);
+      this.totalCompletions += 1;
+      this.lastCompletedDate = completionDate;
+      this.updateStreak(completionDate);
+      return this.xpReward;
+    } else {
+      // Partial completion
+      const xpEarned = Math.floor((this.xpReward * actualPercentage) / 100);
+      this.partialCompletions.push({
+        date: completionDate,
+        percentage: actualPercentage,
+        xpEarned
+      });
+      this.lastCompletedDate = completionDate;
+      this.updateStreak(completionDate);
+      return xpEarned;
+    }
   }
 
   fail(date = new Date()) {
     this.failures.push(new Date(date));
     this.currentStreak = 0;
     return this.xpPenalty;
+  }
+
+  addItem(item) {
+    this.items.push({
+      ...item,
+      dateEarned: new Date()
+    });
   }
 
   updateStreak(completionDate) {
@@ -63,13 +88,16 @@ export class Habit {
   }
 
   getStats() {
+    const partialXP = this.partialCompletions.reduce((sum, p) => sum + p.xpEarned, 0);
     return {
       currentStreak: this.currentStreak,
       bestStreak: this.bestStreak,
       totalCompletions: this.totalCompletions,
+      partialCompletions: this.partialCompletions.length,
       completionRate: this.getCompletionRate(),
-      xpEarned: this.totalCompletions * this.xpReward,
-      xpLost: this.failures.length * this.xpPenalty
+      xpEarned: (this.totalCompletions * this.xpReward) + partialXP,
+      xpLost: this.failures.length * this.xpPenalty,
+      itemsEarned: this.items.length
     };
   }
 }

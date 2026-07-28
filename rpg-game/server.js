@@ -2,12 +2,19 @@ import express from 'express';
 import { GameService } from './src/services/GameService.js';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import fs from 'fs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
 const gameService = new GameService();
+
+// Create public directory if it doesn't exist
+const publicDir = path.join(__dirname, 'public');
+if (!fs.existsSync(publicDir)) {
+    fs.mkdirSync(publicDir, { recursive: true });
+}
 
 app.use(express.json());
 
@@ -55,7 +62,8 @@ app.get('/api/users/:userId/habits', (req, res) => {
 
 // Habit actions
 app.post('/api/habits/:habitId/complete', (req, res) => {
-  const result = gameService.completeHabit(req.params.habitId);
+  const { percentage } = req.body;
+  const result = gameService.completeHabit(req.params.habitId, percentage || 100);
   if (!result) {
     return res.status(404).json({ error: 'Habit not found' });
   }
@@ -68,6 +76,53 @@ app.post('/api/habits/:habitId/fail', (req, res) => {
     return res.status(404).json({ error: 'Habit not found' });
   }
   res.json(result);
+});
+
+// Nutrition tracking
+app.post('/api/users/:userId/nutrition', (req, res) => {
+  const result = gameService.logNutrition(req.params.userId, req.body);
+  if (!result) {
+    return res.status(404).json({ error: 'User not found' });
+  }
+  res.json(result);
+});
+
+app.get('/api/users/:userId/inventory', (req, res) => {
+  const inventory = gameService.inventory.get(req.params.userId) || [];
+  res.json(inventory);
+});
+
+// Food search API using Open Food Facts
+app.get('/api/food/search', async (req, res) => {
+  const { query } = req.query;
+  if (!query) {
+    return res.status(400).json({ error: 'Query parameter required' });
+  }
+
+  try {
+    // Using Open Food Facts API (open source, no API key required)
+    const response = await fetch(
+      `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(query)}&search_simple=1&action=process&json=1&page_size=10`
+    );
+
+    if (!response.ok) {
+      throw new Error('Food search failed');
+    }
+
+    const data = await response.json();
+    const foods = data.products.map(product => ({
+      name: product.product_name || 'Unknown',
+      brand: product.brands || '',
+      calories: product.nutriments?.energy_100g || 0,
+      protein: product.nutriments?.proteins_100g || 0,
+      serving: product.serving_size || '100g'
+    })).filter(food => food.calories > 0); // Only return items with nutrition data
+
+    res.json(foods);
+  } catch (error) {
+    console.error('Food search error:', error);
+    res.status(500).json({ error: 'Failed to search foods' });
+  }
 });
 
 const PORT = process.env.PORT || 3000;

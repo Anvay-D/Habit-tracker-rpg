@@ -4,13 +4,16 @@
 
 ### High-Level Architecture
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                        Frontend (SPA)                        │
+┌─────────────────────────────────────────────────────────────────┐
+│                        Frontend (SPA)                            │
 │  ┌─────────────┐ ┌─────────────┐ ┌─────────────┐ ┌─────────────┐ │
 │  │   Status    │ │    Tasks    │ │ Achievements│ │   Journal   │ │
 │  │    Tab      │ │    Tab      │ │    Tab      │ │    Tab      │ │
+│  │  +Nutrition │ │             │ │             │ │             │ │
 │  └─────────────┘ └─────────────┘ └─────────────┘ └─────────────┘ │
-│                      app.js + style.css                         │
+│                      Modular JS Structure                        │
+│  js/state.js | js/api.js | js/navigation.js | js/habits.js      │
+│  js/nutrition.js | js/notifications.js | css/nutrition.css      │
 └─────────────────────────────────────────────────────────────────┘
                               │
                               │ REST API (Fetch)
@@ -22,6 +25,7 @@
 │  │  POST /api/users    GET /api/users/:id                  │   │
 │  │  POST /api/habits   GET /api/habits                     │   │
 │  │  POST /api/complete POST /api/fail                       │   │
+│  │  POST /api/nutrition GET /api/food/search                │   │
 │  └─────────────────────────────────────────────────────────┘   │
 │                              │                                  │
 │                              ▼                                  │
@@ -30,6 +34,7 @@
 │  │  • User Management    • Habit Operations                 │   │
 │  │  • XP Calculations    • Achievement Checks               │   │
 │  │  • Streak Tracking    • Stats Aggregation               │   │
+│  │  • Nutrition Logging  • Item Rewards                     │   │
 │  └─────────────────────────────────────────────────────────┘   │
 │                              │                                  │
 │                              ▼                                  │
@@ -37,6 +42,7 @@
 │  │                    In-Memory Storage                     │   │
 │  │         Map<UserId, User>  Map<HabitId, Habit>          │   │
 │  │              Achievement[]  Journal[]                     │   │
+│  │              Map<UserId, Inventory> Map<Date, Nutrition> │   │
 │  └─────────────────────────────────────────────────────────┘   │
 └─────────────────────────────────────────────────────────────────┘
 ```
@@ -155,8 +161,53 @@ function checkUnlock(userId, userStats, habitStats):
 | GET | /api/users/:userId | Get complete user stats |
 | POST | /api/users/:userId/habits | Create new habit/skill |
 | GET | /api/users/:userId/habits | List user's active habits |
-| POST | /api/habits/:habitId/complete | Complete habit (+XP) |
+| POST | /api/habits/:habitId/complete | Complete habit (+XP, supports partial completion via percentage) |
 | POST | /api/habits/:habitId/fail | Fail habit (-XP) |
+| POST | /api/users/:userId/nutrition | Log nutrition data (water, calories, protein) |
+| GET | /api/food/search | Search food database using Open Food Facts API |
+
+### 3.1 Dynamic Title System
+Titles progress from E-Rank Hunter to King of the Dead based on total XP:
+- 0-99 XP: E-Rank Hunter
+- 100-299 XP: D-Rank Hunter
+- 300-699 XP: C-Rank Hunter
+- 700-1499 XP: B-Rank Hunter
+- 1500-2999 XP: A-Rank Hunter
+- 3000-5999 XP: S-Rank Hunter
+- 6000-9999 XP: Shadow Monarch
+- 10000+ XP: King of the Dead
+
+### 3.2 Partial Task Completion
+- Tasks support percentage-based completion (0-100+)
+- XP rewards are proportional to completion percentage
+- Overachievement (>100%) generates bonus items
+
+### 3.3 Nutrition Tracking
+- Water, calories, and protein tracking
+- Achievements for hydration (3000ml) and nutrition (2000cal + 150g protein)
+- Food database integration via Open Food Facts API
+
+### 11. Flow Trace Analysis
+
+#### Complete Request Chain
+```
+UI (HTML/JS) → Event Handler (onclick/JS)
+     → State Management (currentUserId, localStorage)
+     → HTTP Client (fetch)
+     → Backend (Express routes)
+     → GameService (business logic)
+     → In-Memory Storage (Maps)
+```
+
+#### Identified Issue
+- Click events in HTML (e.g., `onclick="createHabit()"`) were not properly connected to backend
+- Missing error handling in frontend after API calls
+- No request verification logging
+
+#### Fixed Implementation
+- Added public directory creation in server.js:server.js:14
+- Ensured all fetch calls in app.js properly await and handle responses
+- Verified all endpoints are correctly routed to GameService methods
 
 ### 4. Frontend Architecture
 

@@ -1,0 +1,178 @@
+/* Nutrition Tracker Styles */
+.nutrition-search {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+.nutrition-search input {
+    flex: 1;
+    padding: 10px;
+    border: 1px solid #444;
+    background: #1a1a2e;
+    color: #fff;
+    border-radius: 4px;
+}
+
+.nutrition-search button {
+    padding: 10px 20px;
+    background: #4a90d9;
+    border: none;
+    border-radius: 4px;
+    color: #fff;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.nutrition-search button:hover {
+    background: #357abd;
+}
+
+.food-results {
+    max-height: 200px;
+    overflow-y: auto;
+    margin-bottom: 15px;
+    background: #1a1a2e;
+    border-radius: 4px;
+    padding: 5px;
+}
+
+.food-result {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px;
+    margin: 5px 0;
+    background: #252545;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.food-result:hover {
+    background: #353565;
+}
+
+.food-info {
+    flex: 1;
+}
+
+.food-info strong {
+    color: #ffd700;
+}
+
+.food-serving {
+    color: #888;
+    margin-left: 10px;
+    font-size: 0.9em;
+}
+
+.food-nutrition {
+    color: #4CAF50;
+    margin: 0 15px;
+}
+
+.nutrition-inputs {
+    background: #1a1a2e;
+    padding: 20px;
+    border-radius: 8px;
+    margin: 15px 0;
+}
+
+.nutrition-input {
+    margin-bottom: 15px;
+}
+
+.nutrition-input label {
+    display: block;
+    margin-bottom: 5px;
+    color: #ffd700;
+    font-weight: bold;
+}
+
+.nutrition-input input {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #444;
+    background: #252545;
+    color: #fff;
+    border-radius: 4px;
+    font-size: 16px;
+}
+
+.water-buttons {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.water-buttons button {
+    padding: 10px;
+    background: #2196F3;
+    border: none;
+    border-radius: 4px;
+    color: #fff;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.2s;
+}
+
+.water-buttons button:hover {
+    background: #1976D2;
+    transform: translateY(-1px);
+}
+
+.nutrition-inputs > button {
+    width: 100%;
+    padding: 15px;
+    background: #4CAF50;
+    border: none;
+    border-radius: 4px;
+    color: #fff;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: bold;
+    margin-top: 15px;
+    transition: background 0.2s;
+}
+
+.nutrition-inputs > button:hover {
+    background: #45a049;
+}
+
+.nutrition-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 15px;
+    margin: 20px 0;
+}
+
+.nutrition-stat {
+    background: #1a1a2e;
+    padding: 15px;
+    border-radius: 8px;
+    text-align: center;
+}
+
+.nutrition-stat .stat-label {
+    display: block;
+    color: #888;
+    font-size: 14px;
+    margin-bottom: 5px;
+}
+
+.nutrition-stat .stat-value {
+    display: block;
+    color: #ffd700;
+    font-size: 20px;
+    font-weight: bold;
+}
+
+#nutrition-chart {
+    width: 100% !important;
+    max-height: 200px;
+    background: #1a1a2e;
+    border-radius: 8px;
+    padding: 10px;
+}

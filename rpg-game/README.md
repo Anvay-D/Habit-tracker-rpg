@@ -47,3 +47,45 @@ A habit tracking RPG system inspired by Solo Leveling with XP-based progression,
 npm install
 npm start
 ```
+
+## Request Flow Verification
+
+All requests follow this verified chain:
+1. UI elements trigger JavaScript event handlers
+2. Handlers access `currentUserId` state
+3. `fetch()` calls are made to backend endpoints
+4. Express routes delegate to `GameService`
+5. Business logic modifies in-memory Maps
+
+To verify requests are sent, check browser Network tab or server console logs.
+
+## Architecture
+
+### Frontend Structure
+```
+public/
+├── index.html          # Main HTML structure
+├── style.css           # Core styles
+├── css/
+│   └── nutrition.css   # Nutrition tracker styles
+├── app.js              # Main application entry point
+└── js/
+    ├── state.js        # State management
+    ├── api.js          # API client
+    ├── navigation.js   # Tab navigation
+    ├── habits.js       # Habit management
+    ├── nutrition.js    # Nutrition tracking
+    └── notifications.js # Notification system
+```
+
+### Key Features
+- **Modular Architecture**: Frontend code split into feature-based modules
+- **Nutrition Tracking**: Water, calories, protein with Open Food Facts integration
+- **Dynamic Titles**: E-Rank to King of the Dead based on XP
+- **Item Rewards**: Overachievement generates bonus items
+- **Partial Completion**: Percentage-based habit completion
+
+### Water Tracking Fix
+- Water can now be logged independently using quick-add buttons
+- Dedicated `logWaterOnly()` function handles water-only submissions
+- UI provides consistent button layout with responsive grid

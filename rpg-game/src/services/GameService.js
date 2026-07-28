@@ -1,12 +1,16 @@
 import { User } from '../models/User.js';
 import { Habit } from '../models/Habit.js';
 import { Achievement } from '../models/Achievement.js';
+import { TitleSystem } from '../models/Title.js';
+import { Item, ITEM_TEMPLATES } from '../models/Item.js';
 
 export class GameService {
   constructor() {
     this.users = new Map();
     this.habits = new Map();
     this.achievements = this.initializeAchievements();
+    this.inventory = new Map(); // userId -> items[]
+    this.nutrition = new Map(); // userId -> {date: {water, calories, protein}}
   }
 
   initializeAchievements() {
@@ -33,8 +37,8 @@ export class GameService {
     return this.users.get(userId);
   }
 
-  createHabit(userId, name, description, xpReward, xpPenalty, frequency) {
-    const habit = new Habit(userId, name, description, xpReward, xpPenalty, frequency);
+  createHabit(userId, name, description, xpReward, xpPenalty, frequency, targetValue = 100) {
+    const habit = new Habit(userId, name, description, xpReward, xpPenalty, frequency, targetValue);
     this.habits.set(habit.id, habit);
     return habit;
   }
@@ -43,21 +47,50 @@ export class GameService {
     return Array.from(this.habits.values()).filter(h => h.userId === userId && h.isActive);
   }
 
-  completeHabit(habitId) {
+  completeHabit(habitId, percentage = 100) {
     const habit = this.habits.get(habitId);
     if (!habit) return null;
 
-    const xpGained = habit.complete();
+    const xpGained = habit.complete(percentage);
     const user = this.users.get(habit.userId);
+    let itemsEarned = [];
+    let bonusXP = 0;
 
     if (user) {
-      const leveledUp = user.addXP(xpGained);
+      // Handle item rewards for overachievement
+      if (percentage > 100) {
+        const overAmount = percentage - 100;
+        const item = Item.generateForOverachievement(overAmount, habit.xpReward);
+        if (item) {
+          itemsEarned.push(item);
+          if (!this.inventory.has(user.id)) {
+            this.inventory.set(user.id, []);
+          }
+          this.inventory.get(user.id).push(item);
+          habit.addItem(item);
+          bonusXP = Math.floor(item.xpRequired / 10);
+        }
+      }
+
+      const leveledUp = user.addXP(xpGained + bonusXP);
       user.updateStreak();
       const newAchievements = this.checkAchievements(user, habit);
-      return { xpGained, leveledUp, newAchievements };
+      return {
+        xpGained: xpGained + bonusXP,
+        leveledUp,
+        newAchievements,
+        itemsEarned,
+        percentage: Math.max(100, percentage)
+      };
     }
 
-    return { xpGained, leveledUp: false, newAchievements: [] };
+    return {
+      xpGained,
+      leveledUp: false,
+      newAchievements: [],
+      itemsEarned: [],
+      percentage
+    };
   }
 
   failHabit(habitId) {
@@ -111,6 +144,18 @@ export class GameService {
     const unlockedAchievements = this.achievements.filter(a => a.isUnlocked(userId));
     const lockedAchievements = this.achievements.filter(a => !a.isUnlocked(userId));
 
+    // Get title/rank info
+    const titleInfo = TitleSystem.getTitle(user.totalXP);
+    const titleProgress = TitleSystem.getProgressToNext(user.totalXP);
+
+    // Get inventory
+    const userInventory = this.inventory.get(userId) || [];
+
+    // Get nutrition data for today
+    const today = new Date().toDateString();
+    const nutritionData = this.nutrition.get(userId) || {};
+    const todayNutrition = nutritionData[today] || { water: 0, calories: 0, protein: 0 };
+
     return {
       user: {
         id: user.id,
@@ -120,7 +165,10 @@ export class GameService {
         totalXP: user.totalXP,
         xpToNextLevel: user.xpToNextLevel,
         progress: user.getProgress(),
-        streak: user.streak
+        streak: user.streak,
+        title: titleInfo.title,
+        rank: titleInfo.rank,
+        titleProgress
       },
       habits: habits.map(h => ({
         id: h.id,
@@ -129,7 +177,9 @@ export class GameService {
         xpReward: h.xpReward,
         xpPenalty: h.xpPenalty,
         frequency: h.frequency,
-        stats: h.getStats()
+        targetValue: h.targetValue,
+        stats: h.getStats(),
+        items: h.items
       })),
       achievements: {
         unlocked: unlockedAchievements.map(a => ({
@@ -146,7 +196,74 @@ export class GameService {
           xpReward: a.xpReward,
           requirements: a.requirements
         }))
+      },
+      inventory: userInventory,
+      nutrition: {
+        today: todayNutrition,
+        stats: this.getNutritionStats(userId)
       }
     };
+  }
+
+  getNutritionStats(userId) {
+    const nutritionData = this.nutrition.get(userId) || {};
+    const entries = Object.values(nutritionData);
+
+    if (entries.length === 0) {
+      return { avgWater: 0, avgCalories: 0, avgProtein: 0, streak: 0 };
+    }
+
+    const avgWater = Math.floor(entries.reduce((sum, e) => sum + e.water, 0) / entries.length);
+    const avgCalories = Math.floor(entries.reduce((sum, e) => sum + e.calories, 0) / entries.length);
+    const avgProtein = Math.floor(entries.reduce((sum, e) => sum + e.protein, 0) / entries.length);
+
+    // Calculate nutrition streak
+    let nutritionStreak = 0;
+    const sortedDates = Object.keys(nutritionData).sort().reverse();
+    const today = new Date();
+
+    for (let i = 0; i < sortedDates.length; i++) {
+      const entryDate = new Date(sortedDates[i]);
+      const daysDiff = Math.floor((today - entryDate) / (1000 * 60 * 60 * 24));
+
+      if (daysDiff === i && (nutritionData[sortedDates[i]].water >= 2000 || nutritionData[sortedDates[i]].calories >= 1500)) {
+        nutritionStreak++;
+      } else {
+        break;
+      }
+    }
+
+    return { avgWater, avgCalories, avgProtein, streak: nutritionStreak };
+  }
+
+  logNutrition(userId, { water = 0, calories = 0, protein = 0 }) {
+    const user = this.users.get(userId);
+    if (!user) return null;
+
+    const today = new Date().toDateString();
+    const nutritionData = this.nutrition.get(userId) || {};
+
+    if (!nutritionData[today]) {
+      nutritionData[today] = { water: 0, calories: 0, protein: 0 };
+    }
+
+    nutritionData[today].water += water;
+    nutritionData[today].calories += calories;
+    nutritionData[today].protein += protein;
+
+    this.nutrition.set(userId, nutritionData);
+
+    // Check for nutrition achievements
+    const todayData = nutritionData[today];
+    let achievements = [];
+
+    if (todayData.water >= 3000) {
+      achievements.push("Hydration Master");
+    }
+    if (todayData.calories >= 2000 && todayData.protein >= 150) {
+      achievements.push("Nutrition Adept");
+    }
+
+    return { todayData, achievements };
   }
 }
