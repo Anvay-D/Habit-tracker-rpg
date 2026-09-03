@@ -40,6 +40,7 @@ A habit tracking RPG system inspired by Solo Leveling with XP-based progression,
 - Streak milestones
 - Completion goals
 - XP bonuses
+- **Integration**: `src/models/Achievement.js` domain model unified with `public/js/achievements.js` UI module — same requirement type logic in both layers, eliminating duplication
 
 ## Running
 

@@ -1,3 +1,6 @@
+// Achievement model (domain logic)
+import { Achievement as AchievementModel } from './models/Achievement.js';
+
 // Achievements Module
 const Achievements = {
   // Render achievements with progress indicators
@@ -119,28 +122,9 @@ const Achievements = {
   getCurrentValue(requirements, userData) {
     if (!requirements) return 0;
 
-    switch(requirements.type) {
-      case 'level':
-        return userData.user.level;
-      case 'total_xp':
-        return userData.user.totalXP;
-      case 'streak':
-        return userData.user.streak;
-      case 'habit_completions':
-        return userData.habits.reduce((sum, h) => sum + h.stats.totalCompletions, 0);
-      case 'habits_count':
-        return userData.habits.length;
-      case 'hydration':
-        return userData.nutrition ? userData.nutrition.today.water : 0;
-      case 'nutrition':
-        if (!userData.nutrition) return 0;
-        return Math.min(
-          (userData.nutrition.today.calories / requirements.value.calories) * 100,
-          (userData.nutrition.today.protein / requirements.value.protein) * 100
-        );
-      default:
-        return 0;
-    }
+    // Use Achievement model for unified requirement validation
+    const model = new AchievementModel(requirements.name, requirements.description, requirements.xpReward, requirements);
+    return model.getCurrentValue(requirements, userData);
   }
 };
 

@@ -5,11 +5,8 @@ function initNavigation() {
     const navBtns = document.querySelectorAll('.nav-btn');
     navBtns.forEach(btn => {
         btn.addEventListener('click', () => {
-            // Remove active from all buttons and tabs
             navBtns.forEach(b => b.classList.remove('active'));
             document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
-
-            // Add active to clicked button and corresponding tab
             btn.classList.add('active');
             const tabId = btn.dataset.tab;
             document.getElementById(`${tabId}-tab`).classList.add('active');
@@ -53,27 +50,8 @@ async function createNewUser() {
     localStorage.removeItem('userId');
     currentUserId = null;
 
-    const name = prompt('Enter your name:', 'Hunter');
-    if (!name) {
-        // User cancelled - create a default user without prompting again
-        try {
-            const response = await fetch('/api/users', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name: 'Hunter' })
-            });
-
-            if (response.ok) {
-                const data = await response.json();
-                currentUserId = data.userId;
-                localStorage.setItem('userId', JSON.stringify(currentUserId));
-                await loadUserData();
-            }
-        } catch (error) {
-            console.error('Error creating default user:', error);
-        }
-        return;
-    }
+    const name = prompt('Enter your name:', 'Hunter') || 'Hunter';
+    if (!name) return;
 
     try {
         const response = await fetch('/api/users', {
@@ -171,7 +149,7 @@ function renderHabits(habits) {
                 <span class="streak-badge">🔥 ${habit.stats.currentStreak} streak</span>
             </div>
             <div class="habit-actions">
-                <button class="btn-complete" onclick="PartialProgress.showProgressInput('${habit.id}', '${habit.name}', ${habit.xpReward})">RECORD PROGRESS</button>
+                <button class="btn-complete" onclick="completeHabit('${habit.id}')">COMPLETE</button>
                 <button class="btn-fail" onclick="failHabit('${habit.id}')">FAIL</button>
             </div>
             ${habit.items && habit.items.length > 0 ? `<div class="items-earned">Items: ${habit.items.map(i => i.name).join(', ')}</div>` : ''}
@@ -227,6 +205,7 @@ function createAchievementCard(achievement, unlocked) {
             case 'habit_completions': reqText = `Complete habit ${req.value} times`; break;
             case 'habit_streak': reqText = `Achieve ${req.value}-streak on habit`; break;
             case 'habits_count': reqText = `Create ${req.value} habits`; break;
+            default: reqText = 'Complete the requirement';
         }
         content += `<div class="unlock-date">Requirement: ${reqText}</div>`;
     }
@@ -286,7 +265,7 @@ async function completeHabit(habitId) {
         await loadUserData();
 
         let message = `+${result.xpGained}XP`;
-        if (result.leveledUp) {
+        if (isLevelUp) {
             message += ' - LEVEL UP!';
             document.getElementById('player-level').classList.add('level-up');
             setTimeout(() => {
