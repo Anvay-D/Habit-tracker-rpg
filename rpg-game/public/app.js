@@ -5,11 +5,8 @@ function initNavigation() {
     const navBtns = document.querySelectorAll('.nav-btn');
     navBtns.forEach(btn => {
         btn.addEventListener('click', () => {
-            // Remove active from all buttons and tabs
             navBtns.forEach(b => b.classList.remove('active'));
             document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
-
-            // Add active to clicked button and corresponding tab
             btn.classList.add('active');
             const tabId = btn.dataset.tab;
             document.getElementById(`${tabId}-tab`).classList.add('active');
@@ -22,7 +19,12 @@ async function init() {
 
     // Create default user if none exists
     const userData = localStorage.getItem('userId');
-    if (!userData) {
+    // Validate that userId is a proper UUID, not "default" or invalid data
+    const isValidUserId = userData && userData !== '"default"' && userData.includes('-');
+
+    if (!isValidUserId) {
+        // Clear any invalid userId
+        localStorage.removeItem('userId');
         await createNewUser();
     } else {
         currentUserId = JSON.parse(userData);
@@ -48,27 +50,8 @@ async function createNewUser() {
     localStorage.removeItem('userId');
     currentUserId = null;
 
-    const name = prompt('Enter your name:', 'Hunter');
-    if (!name) {
-        // User cancelled - create a default user without prompting again
-        try {
-            const response = await fetch('/api/users', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name: 'Hunter' })
-            });
-
-            if (response.ok) {
-                const data = await response.json();
-                currentUserId = data.userId;
-                localStorage.setItem('userId', JSON.stringify(currentUserId));
-                await loadUserData();
-            }
-        } catch (error) {
-            console.error('Error creating default user:', error);
-        }
-        return;
-    }
+    const name = prompt('Enter your name:', 'Hunter') || 'Hunter';
+    if (!name) return;
 
     try {
         const response = await fetch('/api/users', {
@@ -132,7 +115,8 @@ async function loadUserData() {
     } catch (error) {
         console.error('Error loading user data:', error);
         localStorage.removeItem('userId');
-        location.reload();
+        // Don't reload to prevent infinite refresh loop
+        alert('Session expired. Please refresh the page manually.');
     }
 }
 
@@ -148,11 +132,17 @@ function renderHabits(habits) {
     habits.forEach(habit => {
         const card = document.createElement('div');
         card.className = 'habit-card';
+
+        // Calculate current progress from partial completions
+        const partialProgress = habit.stats.partialCompletions || 0;
+        const avgProgress = partialProgress > 0 ? Math.floor((habit.stats.xpEarned / (habit.xpReward * partialProgress)) * 100) : 0;
+
         card.innerHTML = `
             <div class="habit-info">
                 <h3>${habit.name}</h3>
                 <p>${habit.description}</p>
                 <div class="unlock-date">Quest Rate: ${habit.stats.completionRate}%</div>
+                ${partialProgress > 0 ? `<div class="progress-info">Progress: ${avgProgress}% (${partialProgress} sessions)</div>` : ''}
             </div>
             <div class="habit-stats">
                 <span class="xp-badge">+${habit.xpReward}XP / -${habit.xpPenalty}XP</span>
@@ -162,6 +152,7 @@ function renderHabits(habits) {
                 <button class="btn-complete" onclick="completeHabit('${habit.id}')">COMPLETE</button>
                 <button class="btn-fail" onclick="failHabit('${habit.id}')">FAIL</button>
             </div>
+            ${habit.items && habit.items.length > 0 ? `<div class="items-earned">Items: ${habit.items.map(i => i.name).join(', ')}</div>` : ''}
         `;
         container.appendChild(card);
     });
@@ -169,19 +160,25 @@ function renderHabits(habits) {
 
 function renderAchievements(achievements) {
     const container = document.getElementById('achievements-list');
-    container.innerHTML = '';
 
-    // Show unlocked achievements first
-    achievements.unlocked.forEach(achievement => {
-        const card = createAchievementCard(achievement, true);
-        container.appendChild(card);
-    });
+    // Use Achievements module if available, otherwise fallback
+    if (window.Achievements && achievements) {
+        window.Achievements.renderAchievements(achievements, 'achievements-list');
+    } else {
+        container.innerHTML = '';
 
-    // Show locked achievements
-    achievements.locked.forEach(achievement => {
-        const card = createAchievementCard(achievement, false);
-        container.appendChild(card);
-    });
+        // Show unlocked achievements first
+        achievements.unlocked.forEach(achievement => {
+            const card = createAchievementCard(achievement, true);
+            container.appendChild(card);
+        });
+
+        // Show locked achievements
+        achievements.locked.forEach(achievement => {
+            const card = createAchievementCard(achievement, false);
+            container.appendChild(card);
+        });
+    }
 }
 
 function createAchievementCard(achievement, unlocked) {
@@ -208,6 +205,7 @@ function createAchievementCard(achievement, unlocked) {
             case 'habit_completions': reqText = `Complete habit ${req.value} times`; break;
             case 'habit_streak': reqText = `Achieve ${req.value}-streak on habit`; break;
             case 'habits_count': reqText = `Create ${req.value} habits`; break;
+            default: reqText = 'Complete the requirement';
         }
         content += `<div class="unlock-date">Requirement: ${reqText}</div>`;
     }
@@ -267,7 +265,7 @@ async function completeHabit(habitId) {
         await loadUserData();
 
         let message = `+${result.xpGained}XP`;
-        if (result.leveledUp) {
+        if (isLevelUp) {
             message += ' - LEVEL UP!';
             document.getElementById('player-level').classList.add('level-up');
             setTimeout(() => {
